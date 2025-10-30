@@ -1,0 +1,7 @@
+{
+  "name": "Dream House Designer AI",
+  "description": "An application that allows users to design their dream house by providing preferences and generating detailed descriptions and visual images for each part of the house using AI.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
