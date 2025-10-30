@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { User, Project, HousePreferences, RoomDesign } from '../types';
+import React, { useState } from 'react';
+import { User, Project, HousePreferences } from '../types';
 import Sidebar from './Sidebar';
 import DesignForm from './DesignForm';
 import ResultDisplay from './ResultDisplay';
 import LoadingIndicator from './LoadingIndicator';
-import { generateDesignsAndTrends, generateImageForDesign, generateVideoForDesign } from '../services/geminiService';
+import { generateDesignsAndTrends, generateImageForDesign } from '../services/geminiService';
 import SparklesIcon from './icons/SparklesIcon';
 
 
@@ -12,7 +12,6 @@ interface DashboardProps {
   user: User;
   projects: Project[];
   addProject: (project: Project) => void;
-  updateProject: (project: Project) => void;
   onLogout: () => void;
   history: string[];
   addToHistory: (log: string) => void;
@@ -20,33 +19,11 @@ interface DashboardProps {
 
 type View = 'FORM' | 'LOADING' | 'RESULT';
 
-const Dashboard: React.FC<DashboardProps> = ({ user, projects, addProject, updateProject, onLogout, history, addToHistory }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, projects, addProject, onLogout, history, addToHistory }) => {
   const [currentView, setCurrentView] = useState<View>('FORM');
   const [activeProject, setActiveProject] = useState<Project | null>(null);
   const [progressMessage, setProgressMessage] = useState('');
   const [error, setError] = useState<string | null>(null);
-  const [apiKeySelected, setApiKeySelected] = useState(false);
-
-  useEffect(() => {
-    // Check for API key status for video generation on component mount
-    const checkKey = async () => {
-      if (window.aistudio?.hasSelectedApiKey) {
-        const hasKey = await window.aistudio.hasSelectedApiKey();
-        setApiKeySelected(hasKey);
-      }
-    };
-    checkKey();
-  }, []);
-
-  const handleSelectApiKey = async () => {
-    if (window.aistudio?.openSelectKey) {
-      await window.aistudio.openSelectKey();
-      // Assume success to improve UX. Error handling will catch invalid keys.
-      setApiKeySelected(true);
-      addToHistory('API key selected for video generation.');
-    }
-  };
-
 
   const handleFormSubmit = async (preferences: HousePreferences) => {
     setCurrentView('LOADING');
@@ -93,45 +70,6 @@ const Dashboard: React.FC<DashboardProps> = ({ user, projects, addProject, updat
     }
   };
 
-  const handleGenerateVideo = async (designArea: string) => {
-    if (!activeProject || !activeProject.designs) return;
-
-    const designToUpdate = activeProject.designs.find(d => d.area === designArea);
-    if (!designToUpdate || !designToUpdate.imageUrl) return;
-    
-    addToHistory(`Generating 3D fly-through for ${designArea}.`);
-
-    setActiveProject(prev => prev ? ({
-      ...prev,
-      designs: prev.designs.map(d => d.area === designArea ? { ...d, isVideoGenerating: true } : d)
-    }) : null);
-
-    try {
-      const videoUrl = await generateVideoForDesign(designToUpdate.description, activeProject.preferences, designToUpdate.imageUrl);
-      
-      const updatedProject = {
-        ...activeProject,
-        designs: activeProject.designs.map(d => d.area === designArea ? { ...d, videoUrl, isVideoGenerating: false } : d)
-      };
-
-      setActiveProject(updatedProject);
-      updateProject(updatedProject);
-
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'An unknown error occurred.';
-      console.error(err);
-      setError(`Failed to generate video for ${designArea}. ${errorMessage}`);
-      if (errorMessage.includes("invalid")) {
-        setApiKeySelected(false); // Force re-selection on invalid key error
-      }
-      setActiveProject(prev => prev ? ({
-        ...prev,
-        designs: prev.designs.map(d => d.area === designArea ? { ...d, isVideoGenerating: false } : d)
-      }) : null);
-      addToHistory(`Error generating video for ${designArea}.`);
-    }
-  };
-  
   const startNewProject = () => {
     setActiveProject(null);
     setCurrentView('FORM');
@@ -144,7 +82,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, projects, addProject, updat
       case 'LOADING':
         return <LoadingIndicator progressMessage={progressMessage} />;
       case 'RESULT':
-        return activeProject && <ResultDisplay project={activeProject} onGenerateVideo={handleGenerateVideo} apiKeySelected={apiKeySelected} onSelectApiKey={handleSelectApiKey} />;
+        return activeProject && <ResultDisplay project={activeProject} />;
       case 'FORM':
       default:
         return (
@@ -162,7 +100,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, projects, addProject, updat
                     >
                         Create a New Dream House
                     </button>
-                    {activeProject && <div className="mt-8"><ResultDisplay project={activeProject} onGenerateVideo={handleGenerateVideo} apiKeySelected={apiKeySelected} onSelectApiKey={handleSelectApiKey} /></div>}
+                    {activeProject && <div className="mt-8"><ResultDisplay project={activeProject} /></div>}
                 </div>
               )}
             </div>

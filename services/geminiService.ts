@@ -77,12 +77,13 @@ export const generateDesignsAndTrends = async (preferences: HousePreferences): P
 export const generateImageForDesign = async (designDescription: string, preferences: HousePreferences): Promise<string> => {
     try {
         const prompt = `
-            Create a photorealistic, ultra-high-quality architectural visualization.
-            The design must reflect the '${preferences.style}' architectural style as interpreted in ${preferences.country}.
-            Incorporate elements appropriate for the culture and climate of ${preferences.country}.
+            Generate a hyperrealistic, 8k resolution, architectural photograph of the following space: ${designDescription}.
+            The image must be a wide-angle shot, capturing the entire room/space to give a comprehensive and impressive view.
+            Style: ${preferences.style}, with authentic cultural influences from ${preferences.country}.
             Color Palette: ${preferences.colorPalette}.
-            Description for this specific area: ${designDescription}.
-            The image should be bright, inviting, and look like a professional architectural rendering from a top design magazine. Use cinematic lighting and 8k resolution detail.
+            Lighting: Cinematic, natural light that beautifully illuminates the space, creating a bright, airy, and inviting atmosphere.
+            Quality: Absolutely photorealistic, indistinguishable from a professional photograph taken for an elite architectural magazine like Architectural Digest. Rendered with V-Ray-like quality, focusing on intricate material textures, realistic shadows, and perfect light interaction.
+            Composition: Ensure the entire space is visible. The camera angle should be chosen to make the room feel spacious and luxurious.
         `;
 
         const response = await ai.models.generateImages({
@@ -104,69 +105,5 @@ export const generateImageForDesign = async (designDescription: string, preferen
         console.error("Error generating image:", error);
         // Return a placeholder or throw an error
         return "https://picsum.photos/1920/1080";
-    }
-};
-
-const dataUrlToBase64 = (dataUrl: string): string => {
-  return dataUrl.split(',')[1];
-};
-
-export const generateVideoForDesign = async (designDescription: string, preferences: HousePreferences, imageB64DataUrl: string): Promise<string> => {
-    try {
-        if (!window.aistudio || !await window.aistudio.hasSelectedApiKey()) {
-            throw new Error("API key not selected. Please select an API key to generate videos.");
-        }
-
-        const aiWithUserKey = new GoogleGenAI({ apiKey: process.env.API_KEY });
-
-        const prompt = `
-            Create a cinematic, photorealistic 3D fly-through video of this space, which is located in ${preferences.country}.
-            The style should be ${preferences.style} with a ${preferences.colorPalette} color palette, respecting the local culture.
-            The video should start from the provided image and slowly pan around the room, showing more details based on this description: ${designDescription}.
-            Make it feel like a professional architectural visualization video. Keep it short, around 5-7 seconds.
-        `;
-        
-        const imageBytes = dataUrlToBase64(imageB64DataUrl);
-
-        let operation = await aiWithUserKey.models.generateVideos({
-            model: 'veo-3.1-fast-generate-preview',
-            prompt: prompt,
-            image: {
-                imageBytes: imageBytes,
-                mimeType: 'image/png',
-            },
-            config: {
-                numberOfVideos: 1,
-                resolution: '720p',
-                aspectRatio: '16:9'
-            }
-        });
-
-        // Polling for the result
-        while (!operation.done) {
-            await new Promise(resolve => setTimeout(resolve, 10000)); // Poll every 10 seconds
-            operation = await aiWithUserKey.operations.getVideosOperation({ operation: operation });
-        }
-
-        if (operation.response?.generatedVideos?.[0]?.video?.uri) {
-            const downloadLink = operation.response.generatedVideos[0].video.uri;
-            const videoUrlWithKey = `${downloadLink}&key=${process.env.API_KEY}`;
-            
-            const response = await fetch(videoUrlWithKey);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch video: ${response.statusText}`);
-            }
-            const videoBlob = await response.blob();
-            return URL.createObjectURL(videoBlob);
-        } else {
-            throw new Error("Video generation completed, but no video URI was returned.");
-        }
-
-    } catch (error) {
-        console.error("Error generating video:", error);
-        if (error instanceof Error && error.message.includes("Requested entity was not found.")) {
-          throw new Error("Your API key is invalid or lacks permissions. Please select a valid key and try again.");
-        }
-        throw new Error("Failed to generate video. This is an experimental feature and may not always succeed.");
     }
 };

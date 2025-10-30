@@ -31,11 +31,6 @@ const App: React.FC = () => {
     addToHistory(`New project '${newProject.name}' was created and generated.`);
   };
 
-  const updateProject = (updatedProject: Project) => {
-    setProjects(prevProjects => prevProjects.map(p => p.id === updatedProject.id ? updatedProject : p));
-    addToHistory(`Project '${updatedProject.name}' was updated with a 3D fly-through.`);
-  };
-
   const addToHistory = useCallback((log: string) => {
     const timestamp = new Date().toLocaleTimeString();
     setHistory(prev => [`[${timestamp}] ${log}`, ...prev].slice(0, 20)); // Keep last 20 history items
@@ -51,7 +46,6 @@ const App: React.FC = () => {
         user={user}
         projects={projects}
         addProject={addProject}
-        updateProject={updateProject}
         onLogout={handleLogout}
         history={history}
         addToHistory={addToHistory}
