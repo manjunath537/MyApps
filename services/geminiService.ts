@@ -1,15 +1,5 @@
-import { GoogleGenAI, Type } from "@google/genai";
-import { HousePreferences, RoomDesign } from '../types';
-
-// IMPORTANT: In a real application, the API key would be handled on a secure backend.
-// Here we assume it's available as an environment variable.
-const API_KEY = process.env.API_KEY;
-
-if (!API_KEY) {
-  console.warn("API_KEY is not set. Please set it in your environment variables.");
-}
-
-const ai = new GoogleGenAI({ apiKey: API_KEY });
+import { GoogleGenAI, Modality, Type } from "@google/genai";
+import { HousePreferences, RoomDesign, Budget } from '../types';
 
 const descriptionAndTrendsSchema = {
   type: Type.OBJECT,
@@ -28,22 +18,41 @@ const descriptionAndTrendsSchema = {
             type: Type.STRING,
             description: "A detailed, evocative description of this specific area of the house, incorporating cultural and stylistic elements.",
           },
+          budgetEstimate: {
+            type: Type.STRING,
+            description: "A rough cost estimate for this specific room/area, in the local currency."
+          }
         },
-        required: ["area", "description"],
+        required: ["area", "description", "budgetEstimate"],
       },
     },
     trendAnalysis: {
       type: Type.STRING,
       description: "A summary of current architectural and interior design trends for the specified country, relevant to the user's preferences. Provide actionable suggestions in a concise paragraph."
+    },
+    budget: {
+        type: Type.OBJECT,
+        properties: {
+            overallEstimate: {
+                type: Type.STRING,
+                description: "The overall estimated cost range for the entire project in the local currency."
+            },
+            summary: {
+                type: Type.STRING,
+                description: "A brief summary of the main cost factors for this project."
+            }
+        },
+        required: ["overallEstimate", "summary"]
     }
   },
-  required: ["designs", "trendAnalysis"],
+  required: ["designs", "trendAnalysis", "budget"],
 };
 
-export const generateDesignsAndTrends = async (preferences: HousePreferences): Promise<{ designs: RoomDesign[], trendAnalysis: string }> => {
+export const generateDesignsAndTrends = async (preferences: HousePreferences): Promise<{ designs: RoomDesign[], trendAnalysis: string, budget: Budget }> => {
   try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
     const prompt = `
-      You are a world-class architect and cultural design expert specializing in the architecture of ${preferences.country}.
+      You are a world-class architect, cultural design expert, and quantity surveyor specializing in the architecture of ${preferences.country}.
       Your task is to create a concept for a client's dream home based on their preferences.
 
       First, generate a detailed and inspiring description for each key area of the house: Exterior, Foyer, Living Room, Kitchen, Dining Room, Master Bedroom, and Master Bathroom.
@@ -51,6 +60,8 @@ export const generateDesignsAndTrends = async (preferences: HousePreferences): P
       Ensure the design is cohesive and reflects all the client's preferences, while masterfully integrating traditional motifs, local materials, and cultural nuances of ${preferences.country}.
 
       Second, provide a concise summary of current architectural and interior design trends in ${preferences.country} that are relevant to the client's preferences. This analysis should be a single paragraph and provide actionable suggestions.
+
+      Third, provide a realistic budget projection for this project in the local currency of ${preferences.country}. This should include an overall estimated cost range (e.g., "$500,000 - $650,000 USD") and a brief summary of the main cost factors. For each individual room/area you describe, also provide a rough cost estimate.
 
       Client Preferences:
       ${JSON.stringify(preferences, null, 2)}
@@ -66,16 +77,17 @@ export const generateDesignsAndTrends = async (preferences: HousePreferences): P
     });
 
     const parsedResponse = JSON.parse(result.text);
-    return parsedResponse as { designs: RoomDesign[], trendAnalysis: string };
+    return parsedResponse as { designs: RoomDesign[], trendAnalysis: string, budget: Budget };
 
   } catch (error) {
     console.error("Error generating house design descriptions:", error);
-    throw new Error("Failed to generate house design descriptions. Please check your API key and connection.");
+    throw error;
   }
 };
 
 export const generateImageForDesign = async (designDescription: string, preferences: HousePreferences): Promise<string> => {
     try {
+        const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
         const prompt = `
             Generate a hyperrealistic, 8k resolution, architectural photograph of the following space: ${designDescription}.
             The image must be a wide-angle shot, capturing the entire room/space to give a comprehensive and impressive view.
@@ -103,7 +115,41 @@ export const generateImageForDesign = async (designDescription: string, preferen
         }
     } catch (error) {
         console.error("Error generating image:", error);
-        // Return a placeholder or throw an error
-        return "https://picsum.photos/1920/1080";
+        throw error;
     }
+};
+
+export const changeImageColor = async (base64ImageData: string, mimeType: string, newColorPrompt: string): Promise<string> => {
+  try {
+    const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: {
+        parts: [
+          {
+            inlineData: {
+              data: base64ImageData,
+              mimeType: mimeType,
+            },
+          },
+          {
+            text: `Subtly and realistically change the primary color scheme of this room to incorporate tones of ${newColorPrompt}, while maintaining the original architecture, furniture, and overall photorealistic quality. Do not add or remove any objects.`,
+          },
+        ],
+      },
+      config: {
+          responseModalities: [Modality.IMAGE],
+      },
+    });
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        const base64ImageBytes: string = part.inlineData.data;
+        return `data:${part.inlineData.mimeType};base64,${base64ImageBytes}`;
+      }
+    }
+    throw new Error("No image was returned from the color change request.");
+  } catch (error) {
+    console.error("Error changing image color:", error);
+    throw error;
+  }
 };

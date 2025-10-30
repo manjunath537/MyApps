@@ -15,10 +15,16 @@ export interface HousePreferences {
   additionalRequests: string;
 }
 
+export interface Budget {
+  overallEstimate: string;
+  summary: string;
+}
+
 export interface RoomDesign {
   area: string;
   description: string;
   imageUrl?: string;
+  budgetEstimate?: string;
 }
 
 export interface Project {
@@ -28,4 +34,5 @@ export interface Project {
   designs: RoomDesign[];
   createdAt: Date;
   trendAnalysis?: string;
+  budget?: Budget;
 }
