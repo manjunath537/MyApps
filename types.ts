@@ -1,4 +1,3 @@
-
 export interface User {
   id: string;
   username: string;
@@ -6,6 +5,7 @@ export interface User {
 
 export interface HousePreferences {
   style: string;
+  country: string;
   bedrooms: number;
   bathrooms: number;
   stories: number;
@@ -29,4 +29,5 @@ export interface Project {
   preferences: HousePreferences;
   designs: RoomDesign[];
   createdAt: Date;
+  trendAnalysis?: string;
 }

@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { HousePreferences } from '../types';
 import SparklesIcon from './icons/SparklesIcon';
@@ -12,6 +11,7 @@ interface DesignFormProps {
 const DesignForm: React.FC<DesignFormProps> = ({ onSubmit, isLoading }) => {
   const [prefs, setPrefs] = useState<HousePreferences>({
     style: 'Modern',
+    country: 'United States',
     bedrooms: 4,
     bathrooms: 3,
     stories: 2,
@@ -41,8 +41,10 @@ const DesignForm: React.FC<DesignFormProps> = ({ onSubmit, isLoading }) => {
   };
   
   const allFeatures = ['Open Floor Plan', 'Swimming Pool', 'Home Office', 'Gourmet Kitchen', 'Fireplace', 'Balcony', 'Smart Home', 'Home Gym', 'Walk-in Closet'];
-  const styles = ['Modern', 'Contemporary', 'Minimalist', 'Industrial', 'Farmhouse', 'Victorian', 'Coastal'];
+  const styles = ['Modern', 'Contemporary', 'Minimalist', 'Industrial', 'Farmhouse', 'Victorian', 'Coastal', 'Traditional'];
   const palettes = ['Warm Neutrals', 'Cool Tones', 'Earthy & Organic', 'Monochromatic', 'Bold & Vibrant'];
+  const countries = ['United States', 'Japan', 'Italy', 'Brazil', 'Sweden', 'Morocco', 'India', 'Australia', 'Mexico', 'South Korea', 'Nigeria', 'Greece'];
+
 
   return (
     <div className="p-8 bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 max-w-4xl mx-auto">
@@ -56,14 +58,22 @@ const DesignForm: React.FC<DesignFormProps> = ({ onSubmit, isLoading }) => {
               {styles.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-          {/* Color Palette */}
+           {/* Country */}
           <div>
+            <label htmlFor="country" className="block text-sm font-medium text-slate-400 mb-2">Country / Cultural Inspiration</label>
+            <select id="country" name="country" value={prefs.country} onChange={handleInputChange} className="w-full bg-slate-700 border-slate-600 rounded-lg p-2.5 focus:ring-sky-500 focus:border-sky-500">
+              {countries.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+        </div>
+        
+        <div>
             <label htmlFor="colorPalette" className="block text-sm font-medium text-slate-400 mb-2">Color Palette</label>
             <select id="colorPalette" name="colorPalette" value={prefs.colorPalette} onChange={handleInputChange} className="w-full bg-slate-700 border-slate-600 rounded-lg p-2.5 focus:ring-sky-500 focus:border-sky-500">
                {palettes.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
-          </div>
         </div>
+
 
         {/* Sliders */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-end">

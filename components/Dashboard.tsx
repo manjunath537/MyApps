@@ -1,11 +1,10 @@
-
 import React, { useState, useEffect } from 'react';
 import { User, Project, HousePreferences, RoomDesign } from '../types';
 import Sidebar from './Sidebar';
 import DesignForm from './DesignForm';
 import ResultDisplay from './ResultDisplay';
 import LoadingIndicator from './LoadingIndicator';
-import { generateHouseDesigns, generateImageForDesign, generateVideoForDesign } from '../services/geminiService';
+import { generateDesignsAndTrends, generateImageForDesign, generateVideoForDesign } from '../services/geminiService';
 import SparklesIcon from './icons/SparklesIcon';
 
 
@@ -52,17 +51,18 @@ const Dashboard: React.FC<DashboardProps> = ({ user, projects, addProject, updat
   const handleFormSubmit = async (preferences: HousePreferences) => {
     setCurrentView('LOADING');
     setError(null);
-    addToHistory(`Generating new design for project 'My ${preferences.style} House'.`);
-    setProgressMessage("Generating design descriptions...");
+    addToHistory(`Generating new design for a ${preferences.style} House in ${preferences.country}.`);
+    setProgressMessage("Generating design descriptions and trend analysis...");
 
     try {
-      const designDescriptions = await generateHouseDesigns(preferences);
+      const { designs, trendAnalysis } = await generateDesignsAndTrends(preferences);
 
       const newProject: Project = {
         id: `project-${Date.now()}`,
-        name: `My ${preferences.style} House`,
+        name: `My ${preferences.style} House in ${preferences.country}`,
         preferences: preferences,
-        designs: designDescriptions,
+        designs: designs,
+        trendAnalysis: trendAnalysis,
         createdAt: new Date(),
       };
 
@@ -70,8 +70,8 @@ const Dashboard: React.FC<DashboardProps> = ({ user, projects, addProject, updat
       setCurrentView('RESULT');
 
       // Generate images in the background
-      const imagePromises = designDescriptions.map(async (design, index) => {
-        setProgressMessage(`Generating image for ${design.area}... (${index + 1}/${designDescriptions.length})`);
+      const imagePromises = designs.map(async (design, index) => {
+        setProgressMessage(`Generating image for ${design.area}... (${index + 1}/${designs.length})`);
         const imageUrl = await generateImageForDesign(design.description, preferences);
         return { ...design, imageUrl };
       });

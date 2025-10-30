@@ -1,8 +1,8 @@
-
 import React from 'react';
 import { Project } from '../types';
 import VideoIcon from './icons/VideoIcon';
 import SpinnerIcon from './icons/SpinnerIcon';
+import SparklesIcon from './icons/SparklesIcon';
 
 
 interface ResultDisplayProps {
@@ -14,9 +14,12 @@ interface ResultDisplayProps {
 
 const ResultDisplay: React.FC<ResultDisplayProps> = ({ project, onGenerateVideo, apiKeySelected, onSelectApiKey }) => {
 
-  const Card: React.FC<{ title: string, children: React.ReactNode }> = ({ title, children }) => (
+  const Card: React.FC<{ title: string, children: React.ReactNode, icon?: React.ReactNode }> = ({ title, children, icon }) => (
     <div className="bg-slate-800/50 backdrop-blur-sm rounded-2xl border border-slate-700 overflow-hidden">
-      <h3 className="text-xl font-bold p-4 bg-slate-900/30 text-sky-400">{title}</h3>
+      <h3 className="text-xl font-bold p-4 bg-slate-900/30 text-sky-400 flex items-center gap-2">
+        {icon}
+        {title}
+      </h3>
       <div className="p-4">{children}</div>
     </div>
   );
@@ -25,7 +28,9 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ project, onGenerateVideo,
     <div className="p-8 space-y-8">
       <div className="text-center">
         <h2 className="text-4xl font-bold text-white mb-2">{project.name}</h2>
-        <p className="text-slate-400">A <span className="font-semibold text-sky-400">{project.preferences.style}</span> style home inspired by a <span className="font-semibold text-sky-400">{project.preferences.colorPalette}</span> palette.</p>
+        <p className="text-slate-400">
+          A <span className="font-semibold text-sky-400">{project.preferences.style}</span> style home inspired by a <span className="font-semibold text-sky-400">{project.preferences.colorPalette}</span> palette, with cultural influences from <span className="font-semibold text-sky-400">{project.preferences.country}</span>.
+        </p>
       </div>
 
       {!apiKeySelected && (
@@ -39,6 +44,13 @@ const ResultDisplay: React.FC<ResultDisplayProps> = ({ project, onGenerateVideo,
            </button>
         </div>
       )}
+      
+      {project.trendAnalysis && (
+        <Card title={`AI Trend Analysis: ${project.preferences.country}`} icon={<SparklesIcon className="w-5 h-5 text-yellow-400" />}>
+          <p className="text-slate-300 leading-relaxed">{project.trendAnalysis}</p>
+        </Card>
+      )}
+
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         <Card title="Bedrooms">

@@ -1,4 +1,3 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { HousePreferences, RoomDesign } from '../types';
 
@@ -12,32 +11,46 @@ if (!API_KEY) {
 
 const ai = new GoogleGenAI({ apiKey: API_KEY });
 
-const descriptionSchema = {
-  type: Type.ARRAY,
-  items: {
-    type: Type.OBJECT,
-    properties: {
-      area: {
-        type: Type.STRING,
-        description: "The name of the house area, e.g., 'Exterior', 'Living Room', 'Kitchen'.",
-      },
-      description: {
-        type: Type.STRING,
-        description: "A detailed, evocative description of this specific area of the house.",
+const descriptionAndTrendsSchema = {
+  type: Type.OBJECT,
+  properties: {
+    designs: {
+      type: Type.ARRAY,
+      description: "A list of detailed descriptions for each area of the house.",
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          area: {
+            type: Type.STRING,
+            description: "The name of the house area, e.g., 'Exterior', 'Living Room', 'Kitchen'.",
+          },
+          description: {
+            type: Type.STRING,
+            description: "A detailed, evocative description of this specific area of the house, incorporating cultural and stylistic elements.",
+          },
+        },
+        required: ["area", "description"],
       },
     },
-    required: ["area", "description"],
+    trendAnalysis: {
+      type: Type.STRING,
+      description: "A summary of current architectural and interior design trends for the specified country, relevant to the user's preferences. Provide actionable suggestions in a concise paragraph."
+    }
   },
+  required: ["designs", "trendAnalysis"],
 };
 
-export const generateHouseDesigns = async (preferences: HousePreferences): Promise<RoomDesign[]> => {
+export const generateDesignsAndTrends = async (preferences: HousePreferences): Promise<{ designs: RoomDesign[], trendAnalysis: string }> => {
   try {
     const prompt = `
-      You are an world-class architect and interior designer creating a concept for a client's dream home.
-      Based on the following JSON preferences, generate a detailed and inspiring description for each key area of the house.
-      The areas should include: Exterior, Foyer, Living Room, Kitchen, Dining Room, Master Bedroom, and Master Bathroom.
+      You are a world-class architect and cultural design expert specializing in the architecture of ${preferences.country}.
+      Your task is to create a concept for a client's dream home based on their preferences.
+
+      First, generate a detailed and inspiring description for each key area of the house: Exterior, Foyer, Living Room, Kitchen, Dining Room, Master Bedroom, and Master Bathroom.
       For each area, describe the architectural style, materials, color palette, furniture, lighting, and overall ambiance in a compelling way.
-      Ensure the design is cohesive and reflects all the client's preferences.
+      Ensure the design is cohesive and reflects all the client's preferences, while masterfully integrating traditional motifs, local materials, and cultural nuances of ${preferences.country}.
+
+      Second, provide a concise summary of current architectural and interior design trends in ${preferences.country} that are relevant to the client's preferences. This analysis should be a single paragraph and provide actionable suggestions.
 
       Client Preferences:
       ${JSON.stringify(preferences, null, 2)}
@@ -48,12 +61,12 @@ export const generateHouseDesigns = async (preferences: HousePreferences): Promi
       contents: prompt,
       config: {
         responseMimeType: "application/json",
-        responseSchema: descriptionSchema,
+        responseSchema: descriptionAndTrendsSchema,
       },
     });
 
     const parsedResponse = JSON.parse(result.text);
-    return parsedResponse as RoomDesign[];
+    return parsedResponse as { designs: RoomDesign[], trendAnalysis: string };
 
   } catch (error) {
     console.error("Error generating house design descriptions:", error);
@@ -65,9 +78,10 @@ export const generateImageForDesign = async (designDescription: string, preferen
     try {
         const prompt = `
             Create a photorealistic, ultra-high-quality architectural visualization.
-            Style: ${preferences.style}.
+            The design must reflect the '${preferences.style}' architectural style as interpreted in ${preferences.country}.
+            Incorporate elements appropriate for the culture and climate of ${preferences.country}.
             Color Palette: ${preferences.colorPalette}.
-            Description: ${designDescription}.
+            Description for this specific area: ${designDescription}.
             The image should be bright, inviting, and look like a professional architectural rendering from a top design magazine. Use cinematic lighting and 8k resolution detail.
         `;
 
@@ -106,8 +120,8 @@ export const generateVideoForDesign = async (designDescription: string, preferen
         const aiWithUserKey = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
         const prompt = `
-            Create a cinematic, photorealistic 3D fly-through video of this space.
-            The style should be ${preferences.style} with a ${preferences.colorPalette} color palette.
+            Create a cinematic, photorealistic 3D fly-through video of this space, which is located in ${preferences.country}.
+            The style should be ${preferences.style} with a ${preferences.colorPalette} color palette, respecting the local culture.
             The video should start from the provided image and slowly pan around the room, showing more details based on this description: ${designDescription}.
             Make it feel like a professional architectural visualization video. Keep it short, around 5-7 seconds.
         `;
