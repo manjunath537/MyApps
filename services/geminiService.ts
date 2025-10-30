@@ -92,3 +92,67 @@ export const generateImageForDesign = async (designDescription: string, preferen
         return "https://picsum.photos/1920/1080";
     }
 };
+
+const dataUrlToBase64 = (dataUrl: string): string => {
+  return dataUrl.split(',')[1];
+};
+
+export const generateVideoForDesign = async (designDescription: string, preferences: HousePreferences, imageB64DataUrl: string): Promise<string> => {
+    try {
+        if (!window.aistudio || !await window.aistudio.hasSelectedApiKey()) {
+            throw new Error("API key not selected. Please select an API key to generate videos.");
+        }
+
+        const aiWithUserKey = new GoogleGenAI({ apiKey: process.env.API_KEY });
+
+        const prompt = `
+            Create a cinematic, photorealistic 3D fly-through video of this space.
+            The style should be ${preferences.style} with a ${preferences.colorPalette} color palette.
+            The video should start from the provided image and slowly pan around the room, showing more details based on this description: ${designDescription}.
+            Make it feel like a professional architectural visualization video. Keep it short, around 5-7 seconds.
+        `;
+        
+        const imageBytes = dataUrlToBase64(imageB64DataUrl);
+
+        let operation = await aiWithUserKey.models.generateVideos({
+            model: 'veo-3.1-fast-generate-preview',
+            prompt: prompt,
+            image: {
+                imageBytes: imageBytes,
+                mimeType: 'image/png',
+            },
+            config: {
+                numberOfVideos: 1,
+                resolution: '720p',
+                aspectRatio: '16:9'
+            }
+        });
+
+        // Polling for the result
+        while (!operation.done) {
+            await new Promise(resolve => setTimeout(resolve, 10000)); // Poll every 10 seconds
+            operation = await aiWithUserKey.operations.getVideosOperation({ operation: operation });
+        }
+
+        if (operation.response?.generatedVideos?.[0]?.video?.uri) {
+            const downloadLink = operation.response.generatedVideos[0].video.uri;
+            const videoUrlWithKey = `${downloadLink}&key=${process.env.API_KEY}`;
+            
+            const response = await fetch(videoUrlWithKey);
+            if (!response.ok) {
+                throw new Error(`Failed to fetch video: ${response.statusText}`);
+            }
+            const videoBlob = await response.blob();
+            return URL.createObjectURL(videoBlob);
+        } else {
+            throw new Error("Video generation completed, but no video URI was returned.");
+        }
+
+    } catch (error) {
+        console.error("Error generating video:", error);
+        if (error instanceof Error && error.message.includes("Requested entity was not found.")) {
+          throw new Error("Your API key is invalid or lacks permissions. Please select a valid key and try again.");
+        }
+        throw new Error("Failed to generate video. This is an experimental feature and may not always succeed.");
+    }
+};

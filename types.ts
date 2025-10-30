@@ -19,6 +19,8 @@ export interface RoomDesign {
   area: string;
   description: string;
   imageUrl?: string;
+  isVideoGenerating?: boolean;
+  videoUrl?: string;
 }
 
 export interface Project {
